@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id('id_grup');
             $table->foreignId('id_user')->constrained('users')->cascadeOnDelete();
             $table->date('tanggal');
-            $table->time('jam');
-            $table->string('kamar');
-            $table->double('berat');
-            $table->string('jenis_pakaian');
+            $table->time('jam',);
+            $table->string('kamar', 30);
+            $table->decimal('berat');
+            $table->string('jenis_pakaian', 30);
             $table->integer('jumlah_orang');
-            $table->string('status_data');
+            $table->string('status_data', 20);
             $table->timestamps();
         });
     }

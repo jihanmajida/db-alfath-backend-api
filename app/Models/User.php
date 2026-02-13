@@ -46,4 +46,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function grup() {
+        return $this->hasMany(Grup::class, "id_user");
+    }
 }
