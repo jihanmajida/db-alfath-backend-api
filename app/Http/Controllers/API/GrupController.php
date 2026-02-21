@@ -8,6 +8,30 @@ use Illuminate\Http\Request;
 
 class GrupController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        $nama = $request->query('nama');
+        $date = $request->query('date');
+
+        $grup = Grup::query();
+        $grup->with('pelanggan');
+
+        if ($nama) {
+            $grup->whereHas('pelanggan', function ($query) use ($nama) {
+                $query->where('nama_pelanggan', 'like', '%' . $nama . '%');
+            });
+        }
+
+        if ($date) {
+            $grup->where('tanggal', $date);
+        }
+
+        return response()->json([
+            'result' => $grup ->get()
+        ], 200);
+    }
+
     // Proses penambahan data
     public function store(Request $request)
     {
@@ -28,6 +52,19 @@ class GrupController extends Controller
             return response()->json([
                 'result' => $grup
             ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e], 500);
+        }
+    }
+
+    //Get Data by Id group
+    public function show($id)
+    {
+        try {
+            $grup = Grup::with('pelanggan')->findOrFail($id);
+            return response()->json([
+                'result' => $grup
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => $e], 500);
         }
@@ -62,6 +99,6 @@ class GrupController extends Controller
     {
         $grup = Grup::findOrFail($id);
         $grup->delete();
-        return response()->json(['message'=>'Berhasil Dihapus'],200);
+        return response()->json(['message' => 'Berhasil Dihapus'], 200);
     }
 }
