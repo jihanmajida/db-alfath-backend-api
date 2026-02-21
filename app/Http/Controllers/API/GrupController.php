@@ -61,7 +61,10 @@ class GrupController extends Controller
     public function show($id)
     {
         try {
-            $grup = Grup::with('pelanggan')->findOrFail($id);
+            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
+            if (!$grup) {
+                return response()->json(['message' => 'Grup not found'], 404);
+            }
             return response()->json([
                 'result' => $grup
             ], 200);
