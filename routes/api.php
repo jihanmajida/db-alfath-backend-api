@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\Api\GrupController;
+use App\Http\Controllers\API\PelangganController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -17,4 +18,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/grup/{id}', [GrupController::class, 'show']);
     Route::put('/grup/{id}', [GrupController::class, 'update']);
     Route::delete('/grup/{id}', [GrupController::class, 'destroy']);
+
+    // Pelanggan routes
+    Route::get('/pelanggan', [PelangganController::class, 'index']);
+    Route::post('/pelanggan', [PelangganController::class, 'store']);
+    Route::get('/pelanggan/{id}', [PelangganController::class, 'show']);
+    Route::put('/pelanggan/{id}', [PelangganController::class, 'update']);
+    Route::delete('/pelanggan/{id}', [PelangganController::class, 'destroy']);
 });
