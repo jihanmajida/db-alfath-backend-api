@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\DetailLaundryController;
 use App\Http\Controllers\Api\GrupController;
 use App\Http\Controllers\API\PelangganController;
 use Illuminate\Http\Request;
@@ -25,4 +26,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pelanggan/{id}', [PelangganController::class, 'show']);
     Route::put('/pelanggan/{id}', [PelangganController::class, 'update']);
     Route::delete('/pelanggan/{id}', [PelangganController::class, 'destroy']);
+
+    // Detail Laundry routes
+    Route::get('/detail', [DetailLaundryController::class, 'index']);
+    Route::post('/detail', [DetailLaundryController::class, 'store']);
+    Route::get('/detail/{id}', [DetailLaundryController::class, 'show']);
+    Route::put('/detail/{id}', [DetailLaundryController::class, 'update']);
+    Route::delete('/detail/{id}', [DetailLaundryController::class, 'destroy']);
 });
