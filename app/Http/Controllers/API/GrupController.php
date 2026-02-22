@@ -40,7 +40,7 @@ class GrupController extends Controller
             'tanggal' => 'required|date',
             'jam' => 'required|date_format:H:i',
             'kamar' => 'required|string|max:30',
-            'berat' => 'required|numeric|min:0.1|decimal:2',
+            'berat' => 'required|numeric|min:0.1',
             'jenis_pakaian' => 'required|string|max:30',
             'jumlah_orang' => 'required|integer',
             'status_data' => 'required|string|max:20'
@@ -81,14 +81,17 @@ class GrupController extends Controller
             'tanggal' => 'required|date',
             'jam' => 'required|date_format:H:i',
             'kamar' => 'required|string|max:30',
-            'berat' => 'required|numeric|min:0.1|decimal:2',
+            'berat' => 'required|numeric|min:0.1',
             'jenis_pakaian' => 'required|string|max:30',
             'jumlah_orang' => 'required|integer',
             'status_data' => 'required|string|max:20'
         ]);
 
         try {
-            $grup = Grup::findOrFail($id);
+            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
+            if (!$grup) {
+                return response()->json(['message' => 'Grup not found'], 404);
+            }
             $grup->update($validated);
             return response()->json([
                 'result' => $grup

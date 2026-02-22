@@ -34,6 +34,7 @@ class Grup extends Model
 
     public function pelanggan()
     {
-        return $this->belongsToMany(Pelanggan::class,'detail_laundry','id_grup','id_pelanggan');
+        return $this->belongsToMany(Pelanggan::class,'detail_laundry','id_grup','id_pelanggan',
+        'id_grup','id_pelanggan');
     }
 }

@@ -22,6 +22,6 @@ class Pelanggan extends Model
 
     public function grup()
     {
-        return $this->belongsToMany(Grup::class,'detail_laundry','id_pelanggan','id_grup');
+        return $this->belongsToMany(Grup::class,'detail_laundry','id_pelanggan','id_grup','id_pelanggan','id_grup');
     }
 }
