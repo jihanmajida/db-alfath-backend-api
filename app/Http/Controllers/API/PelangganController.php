@@ -42,7 +42,7 @@ class PelangganController extends Controller
 
     public function show($id)
     {
-        $pelanggan = Pelanggan::find($id);
+        $pelanggan = Pelanggan::where('id_pelanggan', $id)->first();
 
         if ($pelanggan) {
             return response()->json([

@@ -11,6 +11,8 @@ class Grup extends Model
     
     protected $table = "grup";
 
+    protected $primaryKey = 'id_grup';
+    public $incrementing = true;
     protected $fillable = [
         'id_user',
         'tanggal',
@@ -34,7 +36,11 @@ class Grup extends Model
 
     public function pelanggan()
     {
-        return $this->belongsToMany(Pelanggan::class,'detail_laundry','id_grup','id_pelanggan',
-        'id_grup','id_pelanggan');
+        return $this->belongsToMany(Pelanggan::class,
+        'detail_laundry',
+        'id_grup',
+        'id_pelanggan',
+        'id_grup',
+        'id_pelanggan');
     }
 }

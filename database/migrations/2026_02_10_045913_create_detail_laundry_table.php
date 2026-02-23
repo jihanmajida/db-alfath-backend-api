@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('rok');
             $table->integer('jilbab');
             $table->integer('kaos');
-            $table->string('keterangan',100);
+            $table->string('keterangan',100)->nullable();
             $table->timestamps();
         });
     }

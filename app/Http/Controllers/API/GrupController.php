@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\Controller;
 use App\Models\Grup;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class GrupController extends Controller
 {
@@ -28,7 +30,7 @@ class GrupController extends Controller
         }
 
         return response()->json([
-            'result' => $grup ->get()
+            'result' => $grup->get()
         ], 200);
     }
 
@@ -36,7 +38,6 @@ class GrupController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_user' => 'required|exists:users,id',
             'tanggal' => 'required|date',
             'jam' => 'required|date_format:H:i',
             'kamar' => 'required|string|max:30',
@@ -45,6 +46,8 @@ class GrupController extends Controller
             'jumlah_orang' => 'required|integer',
             'status_data' => 'required|string|max:20'
         ]);
+
+        $validated['id_user'] = Auth::id();
 
         try {
             $grup = Grup::create($validated);
@@ -77,7 +80,6 @@ class GrupController extends Controller
     public function update(Request $request, string $id)
     {
         $validated = $request->validate([
-            'id_user' => 'required|exists:users,id',
             'tanggal' => 'required|date',
             'jam' => 'required|date_format:H:i',
             'kamar' => 'required|string|max:30',
@@ -86,6 +88,8 @@ class GrupController extends Controller
             'jumlah_orang' => 'required|integer',
             'status_data' => 'required|string|max:20'
         ]);
+
+        $validated['id_user'] = Auth::id();
 
         try {
             $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
@@ -103,8 +107,13 @@ class GrupController extends Controller
 
     public function destroy(Request $request, string $id)
     {
+        $id = $request->id;
+        
         $grup = Grup::findOrFail($id);
         $grup->delete();
-        return response()->json(['message' => 'Berhasil Dihapus'], 200);
+
+        return response()->json([
+            'message' => 'Berhasil Dihapus'
+        ], 200);
     }
 }
