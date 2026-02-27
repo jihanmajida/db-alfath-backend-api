@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\Controller;
 use App\Models\Grup;
+use App\Models\Pelanggan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class GrupController extends Controller
 {
@@ -14,7 +15,7 @@ class GrupController extends Controller
     public function index(Request $request)
     {
         $nama = $request->query('nama');
-        $date = $request->query('date');
+        $tanggal = $request->query('tanggal');
 
         $grup = Grup::query();
         $grup->with('pelanggan');
@@ -25,38 +26,59 @@ class GrupController extends Controller
             });
         }
 
-        if ($date) {
-            $grup->where('tanggal', $date);
+        if ($tanggal) {
+            $grup->where('tanggal', $tanggal);
         }
 
-        return response()->json([
-            'result' => $grup->get()
-        ], 200);
+        return response()->json($grup->get(), 200);
     }
 
     // Proses penambahan data
     public function store(Request $request)
     {
+        // 1. Validasi semua data termasuk array pelanggan & detail
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'jam' => 'required|date_format:H:i',
-            'kamar' => 'required|string|max:30',
-            'berat' => 'required|numeric|min:0.1',
-            'jenis_pakaian' => 'required|string|max:30',
-            'jumlah_orang' => 'required|integer',
-            'status_data' => 'required|string|max:20'
+            'jam' => 'required',
+            'kamar' => 'required',
+            'berat' => 'required|numeric',
+            'jenisPakaian' => 'required',
+            'jumlahOrang' => 'required|integer',
+            'pelanggan' => 'required|array',
+            'pelanggan.*.nama_pelanggan' => 'required|string',
+            'detail_laundry' => 'required|array',
         ]);
 
+        // 2. Tambahkan id_user secara manual ke array validated
         $validated['id_user'] = Auth::id();
 
         try {
-            $grup = Grup::create($validated);
+            DB::beginTransaction();
 
-            return response()->json([
-                'result' => $grup
-            ], 201);
+            // 3. Simpan Grup menggunakan $validated (Laravel akan mengabaikan array pelanggan/detail jika tidak ada di $fillable)
+            // Namun lebih aman memisahkan data grup saja:
+            $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
+            $grup = Grup::create($grupData);
+
+            // 4. Proses relasi tetap manual karena kebutuhan Pivot (Detail Laundry)
+            foreach ($request->pelanggan as $key => $pData) {
+                $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
+
+                $d = $request->detail_laundry[$key];
+                $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
+                    'baju' => $d['baju'] ?? 0,
+                    'rok' => $d['rok'] ?? 0,
+                    'jilbab' => $d['jilbab'] ?? 0,
+                    'kaos' => $d['kaos'] ?? 0,
+                    'keterangan' => $d['keterangan'] ?? ''
+                ]);
+            }
+
+            DB::commit();
+            return response()->json($grup->load('pelanggan'), 201);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e], 500);
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal: ' . $e->getMessage()], 500);
         }
     }
 
@@ -79,36 +101,56 @@ class GrupController extends Controller
     // Proses edit data
     public function update(Request $request, string $id)
     {
+        // 1. Validasi semua data termasuk array pelanggan & detail
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'jam' => 'required|date_format:H:i',
-            'kamar' => 'required|string|max:30',
-            'berat' => 'required|numeric|min:0.1',
-            'jenis_pakaian' => 'required|string|max:30',
-            'jumlah_orang' => 'required|integer',
-            'status_data' => 'required|string|max:20'
+            'jam' => 'required',
+            'kamar' => 'required',
+            'berat' => 'required|numeric',
+            'jenisPakaian' => 'required',
+            'jumlahOrang' => 'required|integer',
+            'pelanggan' => 'required|array',
+            'pelanggan.*.nama_pelanggan' => 'required|string',
+            'detail_laundry' => 'required|array',
         ]);
 
+        // 2. Tambahkan id_user secara manual ke array validated
         $validated['id_user'] = Auth::id();
 
         try {
-            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
-            if (!$grup) {
-                return response()->json(['message' => 'Grup not found'], 404);
+            DB::beginTransaction();
+
+            // 3. Simpan Grup menggunakan $validated (Laravel akan mengabaikan array pelanggan/detail jika tidak ada di $fillable)
+            // Namun lebih aman memisahkan data grup saja:
+            $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
+            $grup = Grup::create($grupData);
+
+            // 4. Proses relasi tetap manual karena kebutuhan Pivot (Detail Laundry)
+            foreach ($request->pelanggan as $key => $pData) {
+                $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
+
+                $d = $request->detail_laundry[$key];
+                $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
+                    'baju' => $d['baju'] ?? 0,
+                    'rok' => $d['rok'] ?? 0,
+                    'jilbab' => $d['jilbab'] ?? 0,
+                    'kaos' => $d['kaos'] ?? 0,
+                    'keterangan' => $d['keterangan'] ?? ''
+                ]);
             }
-            $grup->update($validated);
-            return response()->json([
-                'result' => $grup
-            ], 200);
+
+            DB::commit();
+            return response()->json($grup->load('pelanggan'), 201);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e], 500);
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal: ' . $e->getMessage()], 500);
         }
     }
 
     public function destroy(Request $request, string $id)
     {
         $id = $request->id;
-        
+
         $grup = Grup::findOrFail($id);
         $grup->delete();
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Pelanggan extends Model
 {
     use HasFactory;
-    
+
     protected $table = "pelanggan";
 
     protected $primaryKey = 'id_pelanggan'; // ← TAMBAHKAN INI
@@ -21,11 +21,12 @@ class Pelanggan extends Model
 
     public function detail_laundry()
     {
-        return $this->hasMany(DetailLaundry::class,'id_pelanggan','id_pelanggan');
+        return $this->hasMany(DetailLaundry::class, 'id_pelanggan', 'id_pelanggan');
     }
 
+    // app/Models/Pelanggan.php
     public function grup()
     {
-        return $this->belongsToMany(Grup::class,'detail_laundry','id_pelanggan','id_grup','id_pelanggan','id_grup');
+        return $this->belongsToMany(Grup::class, 'detail_laundry', 'id_pelanggan', 'id_grup');
     }
 }

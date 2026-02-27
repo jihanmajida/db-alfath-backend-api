@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Grup extends Model
 {
     use HasFactory;
-    
+
     protected $table = "grup";
 
     protected $primaryKey = 'id_grup';
@@ -29,18 +29,14 @@ class Grup extends Model
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
 
-    public function detail_laundry()
-    {
-        return $this->hasMany(DetailLaundry::class,'id_grup', 'id_grup');
-    }
-
     public function pelanggan()
     {
-        return $this->belongsToMany(Pelanggan::class,
-        'detail_laundry',
-        'id_grup',
-        'id_pelanggan',
-        'id_grup',
-        'id_pelanggan');
+        return $this->belongsToMany(Pelanggan::class, 'detail_laundry', 'id_grup', 'id_pelanggan')
+            ->withPivot('baju', 'rok', 'jilbab', 'kaos', 'keterangan'); // Ambil data dari pivot
+    }
+
+    public function detail_laundry()
+    {
+        return $this->hasMany(DetailLaundry::class, 'id_grup', 'id_grup');
     }
 }
