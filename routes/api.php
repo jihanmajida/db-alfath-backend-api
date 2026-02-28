@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/grup', [GrupController::class, 'store']);
     Route::get('/grup/{id}', [GrupController::class, 'show']);
     Route::put('/grup/{id}', [GrupController::class, 'update']);
+    Route::post('/grup/{id}/update-status', [GrupController::class, 'updateStatus']);
     Route::delete('/grup/{id}', [GrupController::class, 'destroy']);
 
     // Pelanggan routes
