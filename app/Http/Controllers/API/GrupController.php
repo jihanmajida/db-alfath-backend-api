@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class GrupController extends Controller
 {
-
     public function index(Request $request)
     {
         $nama = $request->query('nama');
@@ -36,73 +35,6 @@ class GrupController extends Controller
     // Proses penambahan data
     public function store(Request $request)
     {
-        // 1. Validasi (Nama field disesuaikan dengan snake_case agar sinkron dengan model)
-        $validated = $request->validate([
-            'tanggal' => 'required|date',
-            'jam' => 'required',
-            'kamar' => 'required',
-            'berat' => 'required|numeric',
-            'jenis_pakaian' => 'required', // Sesuaikan dengan database
-            'jumlah_orang' => 'required|integer', // Sesuaikan dengan database
-            'status_data' => 'nullable',
-            'pelanggan' => 'required|array',
-            'pelanggan.*.nama_pelanggan' => 'required|string',
-            'detail_laundry' => 'required|array',
-        ]);
-
-        // 2. Tambahkan id_user (Pastikan User sudah login/Auth session jalan)
-        $validated['id_user'] = Auth::id() ?? 1; // Fallback ke 1 untuk testing jika Auth null
-
-        try {
-            DB::beginTransaction();
-
-            // 3. Simpan Grup
-            $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
-            $grup = Grup::create($grupData);
-
-            // 4. Proses relasi Many-to-Many via Pivot (detail_laundry)
-            foreach ($request->pelanggan as $key => $pData) {
-                // Cari pelanggan atau buat baru jika belum ada
-                $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
-
-                $d = $request->detail_laundry[$key];
-                $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
-                    'baju' => $d['baju'] ?? 0,
-                    'rok' => $d['rok'] ?? 0,
-                    'jilbab' => $d['jilbab'] ?? 0,
-                    'kaos' => $d['kaos'] ?? 0,
-                    'keterangan' => $d['keterangan'] ?? ''
-                ]);
-            }
-
-            DB::commit();
-            return response()->json($grup->load('pelanggan'), 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Gagal simpan: ' . $e->getMessage()], 500);
-        }
-    }
-
-    //Get Data by Id group
-    public function show($id)
-    {
-        try {
-            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
-            if (!$grup) {
-                return response()->json(['message' => 'Grup not found'], 404);
-            }
-            return response()->json([
-                'result' => $grup
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e], 500);
-        }
-    }
-
-    // Proses edit data
-    public function update(Request $request, string $id)
-    {
-        // 1. Validasi
         $validated = $request->validate([
             'tanggal' => 'required|date',
             'jam' => 'required',
@@ -116,44 +48,105 @@ class GrupController extends Controller
             'detail_laundry' => 'required|array',
         ]);
 
+        $validated['id_user'] = Auth::id() ?? 1;
+
         try {
             DB::beginTransaction();
 
-            // 2. Cari data grup yang mau diupdate
-            $grup = Grup::findOrFail($id);
-
             $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
-            $grup->update($grupData);
+            $grup = Grup::create($grupData);
 
-            // 3. Update Relasi (Hapus yang lama dulu, baru pasang yang baru)
-            $grup->pelanggan()->detach();
-
+            // Ganti loop dengan safety check ?? []
             foreach ($request->pelanggan as $key => $pData) {
                 $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
 
-                $d = $request->detail_laundry[$key];
+                // Ambil detail berdasarkan key, jika tidak ada gunakan array kosong
+                $d = $request->detail_laundry[$key] ?? [];
+
                 $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
-                    'baju' => $d['baju'] ?? 0,
-                    'rok' => $d['rok'] ?? 0,
-                    'jilbab' => $d['jilbab'] ?? 0,
-                    'kaos' => $d['kaos'] ?? 0,
+                    'baju'       => $d['baju'] ?? 0,
+                    'rok'        => $d['rok'] ?? 0,
+                    'jilbab'     => $d['jilbab'] ?? 0,
+                    'kaos'       => $d['kaos'] ?? 0,
                     'keterangan' => $d['keterangan'] ?? ''
                 ]);
             }
 
             DB::commit();
-            return response()->json($grup->load('pelanggan'), 200);
+            return response()->json($grup->load('pelanggan'), 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Gagal update: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Gagal simpan: ' . $e->getMessage()], 500);
         }
     }
 
+    public function show($id)
+    {
+        try {
+            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
+            if (!$grup) {
+                return response()->json(['message' => 'Grup not found'], 404);
+            }
+            return response()->json(['result' => $grup], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    // Proses edit data
+   public function update(Request $request, $id)
+{
+    // PINDAHKAN VALIDASI KE PALING ATAS
+    $validated = $request->validate([
+        'tanggal' => 'required|date',
+        'jam' => 'required',
+        'kamar' => 'required',
+        'berat' => 'required|numeric',
+        'jenis_pakaian' => 'required',
+        'jumlah_orang' => 'required|integer',
+        'status_data' => 'nullable',
+        'pelanggan' => 'required|array',
+        'pelanggan.*.nama_pelanggan' => 'required|string',
+        'detail_laundry' => 'required|array', // Field ini yang error di Android
+    ]);
+
+    try {
+        DB::beginTransaction(); // Pastikan ini membungkus semua proses update
+
+        $grup = Grup::findOrFail($id);
+        $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
+        
+        // Update data utama
+        $grup->update($grupData);
+
+        // Hapus relasi lama
+        $grup->pelanggan()->detach();
+
+        // Pasang relasi baru
+        foreach ($request->pelanggan as $key => $pData) {
+            $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
+            $d = $request->detail_laundry[$key] ?? [];
+
+            $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
+                'baju' => $d['baju'] ?? 0,
+                'rok' => $d['rok'] ?? 0,
+                'jilbab' => $d['jilbab'] ?? 0,
+                'kaos' => $d['kaos'] ?? 0,
+                'keterangan' => $d['keterangan'] ?? ''
+            ]);
+        }
+
+        DB::commit();
+        return response()->json($grup->load('pelanggan'), 200);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['message' => 'Gagal update: ' . $e->getMessage()], 500);
+    }
+}
+
     public function updateStatus(Request $request, $id)
     {
-        $request->validate([
-            'status_data' => 'required|string'
-        ]);
+        $request->validate(['status_data' => 'required|string']);
 
         $grup = Grup::findOrFail($id);
         $grup->status_data = $request->status_data;
@@ -162,15 +155,17 @@ class GrupController extends Controller
         return response()->json(['message' => 'Status Berhasil Diperbarui'], 200);
     }
 
-    public function destroy(Request $request, string $id)
+    public function destroy($id)
     {
-        $id = $request->id;
+        try {
+            $grup = Grup::findOrFail($id);
+            // Lepas relasi pivot dulu agar database tetap bersih
+            $grup->pelanggan()->detach();
+            $grup->delete();
 
-        $grup = Grup::findOrFail($id);
-        $grup->delete();
-
-        return response()->json([
-            'message' => 'Berhasil Dihapus'
-        ], 200);
+            return response()->json(['message' => 'Berhasil Dihapus'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
+        }
     }
 }
