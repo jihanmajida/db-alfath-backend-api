@@ -17,7 +17,7 @@ class GrupController extends Controller
         $tanggal = $request->query('tanggal');
 
         $grup = Grup::query();
-        $grup->with('pelanggan');
+        $grup->with('pelanggan', 'detail_laundry');
 
         if ($nama) {
             $grup->whereHas('pelanggan', function ($query) use ($nama) {
@@ -73,7 +73,7 @@ class GrupController extends Controller
             }
 
             DB::commit();
-            return response()->json($grup->load('pelanggan'), 201);
+            return response()->json($grup->load(['pelanggan', 'detail_laundry']), 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Gagal simpan: ' . $e->getMessage()], 500);
@@ -83,7 +83,7 @@ class GrupController extends Controller
     public function show($id)
     {
         try {
-            $grup = Grup::with('pelanggan')->where('id_grup', $id)->first();
+            $grup = Grup::with('detail_laundry', 'pelanggan')->where('id_grup', $id)->first();
             if (!$grup) {
                 return response()->json(['message' => 'Grup not found'], 404);
             }
@@ -94,9 +94,9 @@ class GrupController extends Controller
     }
 
     // Proses edit data
-   public function update(Request $request, $id)
+    public function update(Request $request, $id)
 {
-    // PINDAHKAN VALIDASI KE PALING ATAS
+    // 1. Validasi Input
     $validated = $request->validate([
         'tanggal' => 'required|date',
         'jam' => 'required',
@@ -107,40 +107,57 @@ class GrupController extends Controller
         'status_data' => 'nullable',
         'pelanggan' => 'required|array',
         'pelanggan.*.nama_pelanggan' => 'required|string',
-        'detail_laundry' => 'required|array', // Field ini yang error di Android
+        'detail_laundry' => 'required|array',
     ]);
 
     try {
-        DB::beginTransaction(); // Pastikan ini membungkus semua proses update
+        DB::beginTransaction();
 
+        // 2. Cari data Grup
         $grup = Grup::findOrFail($id);
+
+        // 3. Pisahkan data utama dari data relasi
         $grupData = collect($validated)->except(['pelanggan', 'detail_laundry'])->toArray();
-        
-        // Update data utama
+
+        // 4. Update data tabel 'grups'
         $grup->update($grupData);
 
-        // Hapus relasi lama
+        // 5. Reset relasi pivot (detail_laundry)
         $grup->pelanggan()->detach();
 
-        // Pasang relasi baru
+        // 6. Pasang ulang relasi baru satu per satu
         foreach ($request->pelanggan as $key => $pData) {
+            // Pastikan pelanggan ada/dibuat
             $pelanggan = Pelanggan::firstOrCreate(['nama_pelanggan' => $pData['nama_pelanggan']]);
-            $d = $request->detail_laundry[$key] ?? [];
 
+            // Ambil detail berdasarkan index yang sama dengan pelanggan
+            $detailArray = $request->input('detail_laundry');
+            $d = $detailArray[$key] ?? [];
+
+            // Masukkan ke tabel pivot/relasi
             $grup->pelanggan()->attach($pelanggan->id_pelanggan, [
-                'baju' => $d['baju'] ?? 0,
-                'rok' => $d['rok'] ?? 0,
-                'jilbab' => $d['jilbab'] ?? 0,
-                'kaos' => $d['kaos'] ?? 0,
+                'baju'       => (int)($d['baju'] ?? 0),
+                'rok'        => (int)($d['rok'] ?? 0),
+                'jilbab'     => (int)($d['jilbab'] ?? 0),
+                'kaos'       => (int)($d['kaos'] ?? 0),
                 'keterangan' => $d['keterangan'] ?? ''
             ]);
         }
 
         DB::commit();
-        return response()->json($grup->load('pelanggan'), 200);
+
+        // 7. Ambil data segar (fresh) dari DB untuk dikirim ke Android
+        // Ini memastikan Laravel tidak mengirim cache lama/null
+        $dataResponse = $grup->fresh(['pelanggan', 'detail_laundry']);
+
+        return response()->json($dataResponse, 200);
+
     } catch (\Exception $e) {
         DB::rollBack();
-        return response()->json(['message' => 'Gagal update: ' . $e->getMessage()], 500);
+        
+        return response()->json([
+            'message' => 'Gagal update: ' . $e->getMessage()
+        ], 500);
     }
 }
 

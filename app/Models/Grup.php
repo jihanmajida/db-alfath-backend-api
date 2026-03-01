@@ -29,11 +29,11 @@ class Grup extends Model
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
 
-    public function pelanggan() {
-    return $this->belongsToMany(Pelanggan::class, 'detail_laundry', 'id_grup', 'id_pelanggan')
-                ->withPivot(['baju', 'jilbab', 'rok', 'kaos', 'keterangan'])
-                ->withTimestamps(); // <--- TAMBAHKAN INI
-}
+    public function pelanggan()
+    {
+        return $this->belongsToMany(Pelanggan::class, 'detail_laundry', 'id_grup', 'id_pelanggan')
+            ->withTimestamps();
+    }
 
     public function detail_laundry()
     {
