@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\DetailLaundryController;
-use App\Http\Controllers\Api\GrupController;
+use App\Http\Controllers\API\GrupController;
 use App\Http\Controllers\API\PelangganController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
